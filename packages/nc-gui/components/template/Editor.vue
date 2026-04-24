@@ -12,6 +12,8 @@ import {
   isSystemColumn,
   isVirtualCol,
   parseStringDate,
+  serializeDecimalValue,
+  serializeIntValue,
   validateDateWithUnknownFormat,
 } from 'nocodb-sdk'
 import type { CheckboxChangeEvent } from 'ant-design-vue/es/checkbox/interface'
@@ -411,6 +413,10 @@ function remapColNames(batchData: any[], columns: ColumnType[]) {
       } else if (col.uidt === UITypes.DateTime && d) {
         const dateTimeFormat = getDateTimeFormat(data[key])
         d = dayjs(data[key], dateTimeFormat).format('YYYY-MM-DD HH:mm')
+      } else if (col.uidt === UITypes.Decimal && d !== null && d !== undefined && d !== '') {
+        d = serializeDecimalValue(d, undefined, { col })
+      } else if (col.uidt === UITypes.Number && d !== null && d !== undefined && d !== '') {
+        d = serializeIntValue(d, { col })
       }
       return {
         ...aggObj,
@@ -596,9 +602,13 @@ async function importTemplate() {
                       } else if (input === 'true' || input === 'yes' || input === 'y') {
                         input = '1'
                       }
+                    } else if (v.uidt === UITypes.Decimal) {
+                      input = input === '' ? null : serializeDecimalValue(input, undefined, { col: v as ColumnType })
                     } else if (v.uidt === UITypes.Number) {
                       if (input === '') {
                         input = null
+                      } else {
+                        input = serializeIntValue(input, { col: v as ColumnType })
                       }
                     } else if (v.uidt === UITypes.SingleSelect || v.uidt === UITypes.MultiSelect) {
                       if (input === '') {
