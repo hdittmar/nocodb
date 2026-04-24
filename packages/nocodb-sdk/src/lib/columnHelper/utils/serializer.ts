@@ -16,6 +16,7 @@ import { SerializerOrParserFnProps } from '../column.interface';
 import { SelectTypeConversionError } from '~/lib/error';
 import { checkboxTypeMap } from '~/lib/columnHelper/utils/common';
 import { getGroupDecimalSymbolFromLocale } from '~/lib/currencyHelpers';
+import { resolveColumnSeparator, getSeparatorChars } from './separator';
 
 /**
  * Remove outer quotes & unescape
@@ -51,11 +52,36 @@ export const serializeDecimalValue = (
 
   // If it's a string, remove commas and check if it's a valid number
   if (ncIsString(value)) {
-    const cleanedValue = ncIsFunction(callback)
-      ? callback(value)
-      : value
-          .replace(/[\s\u00A0]/g, '') // remove spaces/non-breaking spaces
-          .replace(/(?!^-)[^\d.-]/g, ''); // keep only digits, dot, one leading minus
+    let cleanedValue: string;
+    if (ncIsFunction(callback)) {
+      cleanedValue = callback(value);
+    } else if (params?.col) {
+      const separator = resolveColumnSeparator(parseProp(params.col.meta));
+      const { thousandSeparator, decimalSeparator } =
+        getSeparatorChars(separator);
+
+      cleanedValue = value;
+      // Remove thousand separators
+      if (thousandSeparator) {
+        cleanedValue = cleanedValue.replace(
+          new RegExp('\\' + thousandSeparator, 'g'),
+          ''
+        );
+      }
+      // Replace decimal separator with dot
+      if (decimalSeparator !== '.') {
+        cleanedValue = cleanedValue.replace(
+          new RegExp('\\' + decimalSeparator),
+          '.'
+        );
+      }
+      // Remove anything that's not digit, dot, or leading minus
+      cleanedValue = cleanedValue.replace(/(?!^-)[^\d.-]/g, '').trim();
+    } else {
+      cleanedValue = value
+        .replace(/[\s\u00A0]/g, '')
+        .replace(/(?!^-)[^\d.-]/g, '');
+    }
 
     if (!cleanedValue) return null;
 
@@ -71,8 +97,11 @@ export const serializeDecimalValue = (
   return null;
 };
 
-export const serializeIntValue = (value: string | null | number) => {
-  value = serializeDecimalValue(value);
+export const serializeIntValue = (
+  value: string | null | number,
+  params?: SerializerOrParserFnProps['params']
+) => {
+  value = serializeDecimalValue(value, undefined, params);
 
   if (ncIsNumber(value)) {
     return parseInt(value.toString(), 10);
