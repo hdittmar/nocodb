@@ -2454,6 +2454,7 @@
     "selectBases": "Select bases"
   },
   "activity": {
+    "createDocument": "Create Document",
     "useTemplate": "Use template",
     "clickToResolve": "Click to resolve",
     "resolvedBy": "Resolved by",
