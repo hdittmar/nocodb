@@ -90,6 +90,7 @@ import {
   BaseUser,
   CalendarRange,
   Column,
+  Document,
   Filter,
   FormulaColumn,
   Hook,
@@ -3862,9 +3863,18 @@ export class ColumnsService implements IColumnsService {
       case UITypes.QrCode:
       case UITypes.Barcode:
       case UITypes.Button:
+        await Column.delete2(
+          context,
+          {
+            id: param.columnId,
+            ...generateColumnDeleteHandler(columnWebhookManager),
+          },
+          ncMeta,
+        );
+        break;
       case UITypes.Doc:
-        // PR review fix #3: UUID removed from this group — it has a physical DB column
-        // and must go through the default path (sqlOpPlus + tableUpdate) to drop it.
+        // Soft-delete all documents associated with this field column
+        await Document.softDeleteByColumn(context, param.columnId, ncMeta);
         await Column.delete2(
           context,
           {
