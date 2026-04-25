@@ -255,6 +255,7 @@ export function useCopyPaste({
       isSidebarNodeRenameActive() ||
       isActiveElementInsideExtension() ||
       isActiveElementInsideScriptPane() ||
+      isActiveElementInsideDocFieldPanel() ||
       isCmdJActive() ||
       cmdKActive()
     ) {
