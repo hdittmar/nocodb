@@ -256,6 +256,7 @@ export function useCopyPaste({
       isActiveElementInsideExtension() ||
       isActiveElementInsideScriptPane() ||
       isActiveElementInsideDocFieldPanel() ||
+      isActiveElementInsideSmartTextPanel() ||
       isCmdJActive() ||
       cmdKActive()
     ) {
