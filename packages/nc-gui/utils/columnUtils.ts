@@ -197,6 +197,11 @@ const uiTypes: UiTypesType[] = [
     virtual: 1,
   },
   {
+    name: UITypes.Doc,
+    icon: iconMap.cellDoc,
+    virtual: 1,
+  },
+  {
     name: UITypes.CreatedTime,
     icon: iconMap.cellSystemDate,
   },
@@ -442,6 +447,7 @@ const formViewHiddenColTypes = [
   UITypes.QrCode,
   UITypes.Barcode,
   UITypes.Button,
+  UITypes.Doc,
   UITypes.SpecificDBType,
   UITypes.CreatedTime,
   UITypes.LastModifiedTime,
@@ -506,6 +512,7 @@ const isSearchableColumn = (column: ColumnType) => {
       UITypes.DateTime,
       UITypes.Date,
       UITypes.Button,
+      UITypes.Doc,
       UITypes.LastModifiedTime,
       UITypes.CreatedTime,
       UITypes.Barcode,
@@ -523,7 +530,7 @@ const showReadonlyColumnTooltip = (col: ColumnType) => {
 const showEditRestrictedColumnTooltip = (col: ColumnType) => {
   return (
     !isReadOnlyVirtualCell(col) &&
-    ![UITypes.Button, UITypes.Count, UITypes.Order, UITypes.ForeignKey].includes(col.uidt as UITypes) &&
+    ![UITypes.Button, UITypes.Doc, UITypes.Count, UITypes.Order, UITypes.ForeignKey].includes(col.uidt as UITypes) &&
     !isAutoNumber(col)
   )
 }

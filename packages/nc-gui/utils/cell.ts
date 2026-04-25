@@ -40,6 +40,7 @@ export {
   isAutoNumber,
   isUser,
   isButton,
+  isDoc,
   isAiButton,
   isScriptButton,
   isAI,

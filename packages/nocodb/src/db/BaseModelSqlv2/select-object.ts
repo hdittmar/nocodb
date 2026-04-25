@@ -437,6 +437,9 @@ export const selectObject = (baseModel: IBaseModelSqlV2, logger: Logger) => {
           );
           break;
         }
+        case UITypes.Doc:
+          // Doc is a virtual column — data lives in nc_docs_v2, not the row table
+          break;
         case UITypes.SingleSelect: {
           res[sanitize(getAs(column) || column.column_name)] =
             baseModel.dbDriver.raw(`COALESCE(NULLIF(??, ''), NULL)`, [
