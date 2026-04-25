@@ -53,6 +53,7 @@ import * as nc_202604100000_audit_org_id from './v0/nc_202604100000_audit_org_id
 import * as nc_202604160000_docs_in_data from './v0/nc_202604160000_docs_in_data';
 import * as nc_202604200002_trash_cleanup_due_at from './v0/nc_202604200002_trash_cleanup_due_at';
 import * as nc_202603190620_doc_field from './v0/nc_202603190620_doc_field';
+import * as nc_202604251200_smart_text from './v0/nc_202604251200_smart_text';
 
 // Create a custom migration source class
 export default class XcMigrationSourcev0 {
@@ -117,6 +118,7 @@ export default class XcMigrationSourcev0 {
       'nc_202604200002_trash_cleanup_due_at',
       'nc_202603180000_user_mfa',
       'nc_202603190620_doc_field',
+      'nc_202604251200_smart_text',
     ]);
   }
 
@@ -236,6 +238,8 @@ export default class XcMigrationSourcev0 {
         return nc_202603180000_user_mfa;
       case 'nc_202603190620_doc_field':
         return nc_202603190620_doc_field;
+      case 'nc_202604251200_smart_text':
+        return nc_202604251200_smart_text;
     }
   }
 }
