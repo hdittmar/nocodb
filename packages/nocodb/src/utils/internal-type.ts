@@ -1,4 +1,9 @@
-import type { DependencyTableType, NcContext, NcRequest } from 'nocodb-sdk';
+import type {
+  DependencyTableType,
+  NcContext,
+  NcRequest,
+  ProseMirrorDoc,
+} from 'nocodb-sdk';
 import type { PagedResponseImpl } from '~/helpers/PagedResponse';
 import type { OPERATION_SCOPES } from '~/controllers/internal/operationScopes';
 import type { Dashboard, Workflow } from '~/models';
@@ -60,6 +65,7 @@ export type InternalGETResponseType = Promise<
       totalUsers: number;
       editorCount: number;
     }
+  | { pm: ProseMirrorDoc | null; markdown: string | null }
 >;
 
 export type InternalPOSTResponseType = Promise<
@@ -95,6 +101,7 @@ export type InternalPOSTResponseType = Promise<
       unlink: (string | number | Record<string, any>)[];
     }[]
   | { message: string }
+  | { pm: ProseMirrorDoc | null; markdown: string | null }
 >;
 
 export const INTERNAL_API_MODULE_PROVIDER_KEY = 'INTERNAL_API_MODULE';
