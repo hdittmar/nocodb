@@ -361,6 +361,19 @@ export enum AppEvents {
   RECORDS_SOFT_DELETE = 'records.soft.delete',
   RECORDS_RESTORE = 'records.restore',
   RECORDS_PERMANENT_DELETE = 'records.permanent.delete',
+
+  BASE_VARIABLE_CREATE = 'baseVariable.create',
+  BASE_VARIABLE_UPDATE = 'baseVariable.update',
+  BASE_VARIABLE_DELETE = 'baseVariable.delete',
+
+  MANAGED_APP_CREATE = 'managedApp.create',
+  MANAGED_APP_UPDATE = 'managedApp.update',
+  MANAGED_APP_DELETE = 'managedApp.delete',
+  MANAGED_APP_PUBLISH = 'managedApp.publish',
+  MANAGED_APP_INSTALL = 'managedApp.install',
+  MANAGED_APP_UPDATE_START = 'managedApp.update.start',
+  MANAGED_APP_UPDATE_COMPLETE = 'managedApp.update.complete',
+  MANAGED_APP_UPDATE_FAIL = 'managedApp.update.fail',
 }
 
 export enum ClickhouseTables {
@@ -714,6 +727,7 @@ export enum MapProvider {
   STADIAMAP = 'stadiamap',
   STADIAMAP_APIKEY = 'stadiamap_apikey',
 }
+
 
 /** Default org ID for on-prem deployments */
 export const NC_DEFAULT_ORG_ID = 'org_default';

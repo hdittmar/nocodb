@@ -14,8 +14,17 @@ export const useMetas = createSharedComposable(() => {
 
   const { baseTables } = storeToRefs(useTablesStore())
 
-  // keep a temporary state of deleted tables to avoid get api calls
-  const deletedTableIds = new Set<string>()
+  // keep a temporary state of deleted tables per base to avoid get api calls
+  const deletedTableIdsByBase = new Map<string, Set<string>>()
+
+  const getDeletedTableIds = (baseId: string): Set<string> => {
+    let set = deletedTableIdsByBase.get(baseId)
+    if (!set) {
+      set = new Set<string>()
+      deletedTableIdsByBase.set(baseId, set)
+    }
+    return set
+  }
 
   // Helper function to create composite key: baseId:tableIdOrTitle
   const getMetaKey = (baseId: string, tableIdOrTitle: string) => `${baseId}:${tableIdOrTitle}`
@@ -76,7 +85,7 @@ export const useMetas = createSharedComposable(() => {
     const loadingKey = metaKey
 
     // if already deleted return null
-    if (deletedTableIds.has(tableIdOrTitle)) return null
+    if (deletedTableIdsByBase.get(baseId)?.has(tableIdOrTitle)) return null
 
     const tables = baseTables.value.get(baseId) ?? []
 
@@ -162,7 +171,17 @@ export const useMetas = createSharedComposable(() => {
 
   const clearAllMeta = () => {
     metas.value = {}
-    deletedTableIds.clear()
+    deletedTableIdsByBase.clear()
+  }
+
+  /** Clear cached meta for a single base and reset deleted-table tracking. */
+  const clearBaseMeta = (baseId: string) => {
+    deletedTableIdsByBase.delete(baseId)
+    for (const key of Object.keys(metas.value)) {
+      if (key.startsWith(`${baseId}:`)) {
+        delete metas.value[key]
+      }
+    }
   }
 
   const removeMeta = (baseId: string, idOrTitle: string, deleted = false) => {
@@ -170,7 +189,7 @@ export const useMetas = createSharedComposable(() => {
     const meta = metas.value[metaKey]
 
     if (meta) {
-      if (deleted) deletedTableIds.add(meta.id)
+      if (deleted) getDeletedTableIds(baseId).add(meta.id)
       delete metas.value[getMetaKey(baseId, meta.id)]
       delete metas.value[getMetaKey(baseId, meta.title)]
     }
@@ -178,7 +197,7 @@ export const useMetas = createSharedComposable(() => {
 
   // return partial metadata for related table of a meta service
   const getPartialMeta = async (baseId: string, linkColumnId: string, tableIdOrTitle: string): Promise<TableType | null> => {
-    if (!tableIdOrTitle || !linkColumnId || deletedTableIds.has(tableIdOrTitle)) return null
+    if (!tableIdOrTitle || !linkColumnId || deletedTableIdsByBase.get(baseId)?.has(tableIdOrTitle)) return null
 
     const metaKey = getMetaKey(baseId, tableIdOrTitle)
     const loadingKey = metaKey
@@ -215,6 +234,7 @@ export const useMetas = createSharedComposable(() => {
   return {
     getMeta,
     clearAllMeta,
+    clearBaseMeta,
     metas,
     metasWithIdAsKey,
     removeMeta,
