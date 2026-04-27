@@ -95,6 +95,13 @@ export type InternalPOSTResponseType = Promise<
       unlink: (string | number | Record<string, any>)[];
     }[]
   | { message: string }
+  | {
+      isShared: boolean;
+      token?: string;
+      viewUuid?: string;
+      viewId?: string;
+      rowId?: string;
+    }
 >;
 
 export const INTERNAL_API_MODULE_PROVIDER_KEY = 'INTERNAL_API_MODULE';
