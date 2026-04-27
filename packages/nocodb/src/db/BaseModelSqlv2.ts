@@ -2390,7 +2390,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     linksAsLtar?: boolean;
   }): Promise<void> {
     return await selectObject(this, logger)(params);
-
   }
   public async afterSoftDeleteCompleted(_params: {
     cookie: NcRequest;
@@ -4542,7 +4541,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
             await transaction(this.tnPath).update(softDeletePayload).where(d);
           }
         }
-
       } else {
         const execQueries: ((
           trx: Knex.Transaction,
