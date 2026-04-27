@@ -1547,5 +1547,4 @@ export class PublicDatasService {
 
     return data;
   }
-
 }

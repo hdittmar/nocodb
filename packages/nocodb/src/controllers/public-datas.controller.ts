@@ -330,5 +330,4 @@ export class PublicDatasController {
 
     return response;
   }
-
 }
