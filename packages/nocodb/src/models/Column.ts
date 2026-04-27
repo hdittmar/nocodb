@@ -1326,13 +1326,17 @@ export default class Column<T = any> implements ColumnType {
     // Set Gallery & Kanban view `fk_cover_image_col_id` value to null
     await Column.deleteCoverImageColumnId(context, id, ncMeta);
 
-    // Clear fk_display_value_column_id on LTAR columns referencing the deleted column
-    // Use direct knex query to also catch cross-base LTAR references
+    // Clear fk_display_value_column_id on LTAR columns referencing the deleted column.
+    // Scoped by fk_workspace_id — fk_display_value_column_id has no index, so a bare
+    // `where` would trigger a full-table scan on COL_RELATIONS.
     {
       const links = await ncMeta
         .knex(MetaTable.COL_RELATIONS)
         .select('fk_column_id', 'base_id', 'fk_workspace_id')
-        .where({ fk_display_value_column_id: id });
+        .where({
+          fk_display_value_column_id: id,
+          fk_workspace_id: context.workspace_id,
+        });
 
       for (const link of links) {
         await Column.updateDisplayValueColumn(
