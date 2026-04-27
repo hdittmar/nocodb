@@ -267,7 +267,7 @@ const permissionScopes = {
     'mcpUpdate',
     'mcpDelete',
 
-    // CSV Import
+    // Data Import
     'dataImportPreview',
     'dataImportFile',
 
