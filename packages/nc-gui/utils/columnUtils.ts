@@ -299,6 +299,7 @@ const isColumnInvalid = ({
   col,
   aiIntegrations = [],
   isReadOnly = false,
+  hasEditPermission = true,
   isNocoAiAvailable = false,
   columns = [],
   views = [],
@@ -307,6 +308,12 @@ const isColumnInvalid = ({
   col: ColumnType
   aiIntegrations?: Partial<IntegrationType>[]
   isReadOnly?: boolean
+  /** Whether the current user has `dataEdit` permission. Only the canvas grid
+   * should pass this — it's used to silently disable the button cell for
+   * viewers/commenters (backend `formEditTokenGenerate` is editor+). Callers
+   * used for column-header warnings should leave this default so the header
+   * doesn't flag the column as misconfigured for permission-only gating. */
+  hasEditPermission?: boolean
   isNocoAiAvailable?: boolean
   columns?: ColumnType[]
   views?: ViewType[]
@@ -346,6 +353,11 @@ const isColumnInvalid = ({
         if (!colOptions.fk_form_view_id) {
           result.isInvalid = true
           result.tooltip = 'msg.error.openFormButtonNoFormView'
+        } else if (!hasEditPermission && !isPublicView) {
+          // Viewer/commenter can't mint an edit token (editor+ required).
+          // Silent disable — column is valid, only this user can't use it.
+          result.isInvalid = true
+          result.ignoreTooltip = true
         } else if (isPublicView) {
           // Product decision: OpenForm buttons are disabled inside public shared
           // views. Anonymous editing of existing records erodes per-seat pricing
