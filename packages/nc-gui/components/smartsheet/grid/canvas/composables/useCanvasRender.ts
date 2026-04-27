@@ -2247,6 +2247,7 @@ export function useCanvasRender({
             x: rightEdge - textLen - 18,
             y: textY - 7,
           })
+          ctx.restore()
         } else {
           tryShowTooltip({
             mousePosition,
@@ -2259,7 +2260,6 @@ export function useCanvasRender({
             },
           })
         }
-        ctx.restore()
       }
 
       ctx.beginPath()
@@ -2363,6 +2363,7 @@ export function useCanvasRender({
               x: rightEdge - textLen - 18,
               y: textY - 7,
             })
+            ctx.restore()
           } else {
             tryShowTooltip({
               mousePosition,
@@ -2376,7 +2377,6 @@ export function useCanvasRender({
             })
           }
           availWidth -= 18
-          ctx.restore()
         }
 
         const selectedGroupRecords = isGroupBy.value
