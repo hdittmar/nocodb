@@ -2417,6 +2417,7 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     validateFormula?: boolean;
     pkAndPvOnly?: boolean;
     linksAsLtar?: boolean;
+    fk_display_value_column_id?: string | null;
   }): Promise<void> {
     return await selectObject(this, logger)(params);
   }
