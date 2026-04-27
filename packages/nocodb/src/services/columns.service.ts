@@ -12,6 +12,7 @@ import {
   isCreatedOrLastModifiedTimeCol,
   isLinksOrLTAR,
   isMMOrMMLike,
+  isSupportedDisplayValueColumn,
   isServiceUser,
   isSystemColumn,
   isVirtualCol,
@@ -1112,7 +1113,7 @@ export class ColumnsService implements IColumnsService {
               (colBody as any).fk_display_value_column_id === null ||
               (colBody as any).fk_display_value_column_id
             ) {
-              // Validate that the column belongs to the related table
+              // Validate that the column belongs to the related table and is a supported type
               if ((colBody as any).fk_display_value_column_id) {
                 const colOptions =
                   await column.getColOptions<LinkToAnotherRecordColumn>(
@@ -1128,6 +1129,11 @@ export class ColumnsService implements IColumnsService {
                 if (!displayCol) {
                   NcError.get(context).fieldNotFound(
                     (colBody as any).fk_display_value_column_id,
+                  );
+                }
+                if (!isSupportedDisplayValueColumn(displayCol)) {
+                  NcError.badRequest(
+                    'Selected column type is not supported as a display value field',
                   );
                 }
               }
@@ -5163,6 +5169,19 @@ export class ColumnsService implements IColumnsService {
         }
       }
 
+      // HM displays refTable records, BT displays table records
+      const hmBtDisplayValueTable =
+        ltarReq.type === 'bt' ? table : refTable;
+      const hmBtDisplayValueCol = ltarReq.fk_display_value_column_id
+        ? hmBtDisplayValueTable.columns?.find(
+            (c) => c.id === ltarReq.fk_display_value_column_id,
+          )
+        : undefined;
+      const hmBtDisplayValueColumnId =
+        hmBtDisplayValueCol && isSupportedDisplayValueColumn(hmBtDisplayValueCol)
+          ? hmBtDisplayValueCol.id
+          : null;
+
       savedColumn = await createHmAndBtColumn(
         context,
         param.req,
@@ -5180,6 +5199,7 @@ export class ColumnsService implements IColumnsService {
         {
           ...param.colExtra,
           readonly: ltarReq.readonly || false,
+          fk_display_value_column_id: hmBtDisplayValueColumnId,
         },
         undefined,
         undefined,
@@ -5270,6 +5290,17 @@ export class ColumnsService implements IColumnsService {
           });
         }
       }
+      // OO user-facing column (HM-side) displays refTable records
+      const ooDisplayValueCol = ltarReq.fk_display_value_column_id
+        ? refTable.columns?.find(
+            (c) => c.id === ltarReq.fk_display_value_column_id,
+          )
+        : undefined;
+      const ooDisplayValueColumnId =
+        ooDisplayValueCol && isSupportedDisplayValueColumn(ooDisplayValueCol)
+          ? ooDisplayValueCol.id
+          : null;
+
       savedColumn = await createOOColumn(
         context,
         param.req,
@@ -5286,6 +5317,7 @@ export class ColumnsService implements IColumnsService {
         {
           ...param.colExtra,
           readonly: ltarReq.readonly || false,
+          fk_display_value_column_id: ooDisplayValueColumnId,
         },
         undefined,
         undefined,
@@ -5510,13 +5542,14 @@ export class ColumnsService implements IColumnsService {
         fk_child_column_id: primaryKey.id,
         fk_parent_column_id: refPrimaryKey.id,
         fk_target_view_id: childView?.id,
-        fk_display_value_column_id:
-          ltarReq.fk_display_value_column_id &&
-          refTable.columns?.find(
-            (c) => c.id === ltarReq.fk_display_value_column_id,
-          )
-            ? ltarReq.fk_display_value_column_id
-            : null,
+        fk_display_value_column_id: (() => {
+          const col = ltarReq.fk_display_value_column_id
+            ? refTable.columns?.find(
+                (c) => c.id === ltarReq.fk_display_value_column_id,
+              )
+            : undefined;
+          return col && isSupportedDisplayValueColumn(col) ? col.id : null;
+        })(),
 
         fk_mm_model_id: assocModel.id,
         fk_mm_child_column_id: parentCol.id,
