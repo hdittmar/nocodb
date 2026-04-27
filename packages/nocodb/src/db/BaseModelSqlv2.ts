@@ -9,7 +9,6 @@ import utc from 'dayjs/plugin/utc.js';
 import equal from 'fast-deep-equal';
 import groupBy from 'lodash/groupBy';
 import {
-  AppEvents,
   AuditOperationSubTypes,
   AuditV1OperationTypes,
   ClientType,
@@ -2391,6 +2390,13 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
     linksAsLtar?: boolean;
   }): Promise<void> {
     return await selectObject(this, logger)(params);
+
+  }
+  public async afterSoftDeleteCompleted(_params: {
+    cookie: NcRequest;
+    operationNow: string;
+  }): Promise<void> {
+    // No-op — overridden in EE.
   }
 
   async insert(data, request: NcRequest, trx?, _disableOptimization = false) {
@@ -2445,14 +2451,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
               .update(softDeletePayload)
               .where(where);
 
-        Noco.eventEmitter.emit(AppEvents.RECORDS_SOFT_DELETE, {
-          context: this.context,
-          req: cookie,
-          tableId: this.model.id,
-          rowIds: [id],
-          deletedAt: operationNow,
-        });
-
         await this.softDeleteFileReferences({
           oldData: [data],
           columns: this.model.columns,
@@ -2468,15 +2466,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
           AuditV1OperationTypes.DATA_SOFT_DELETE,
         );
         await this.statsUpdate({ count: -1 });
-
-        // Set trash_cleanup_due_at on first soft-delete if not already scheduled
-        if (!this.model.trash_cleanup_due_at) {
-          await Model.updateTrashCleanupDueAt(
-            this.context,
-            this.model.id,
-            new Date().toISOString(),
-          );
-        }
 
         return response;
       }
@@ -4554,17 +4543,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
           }
         }
 
-        Noco.eventEmitter.emit(AppEvents.RECORDS_SOFT_DELETE, {
-          context: this.context,
-          req: cookie,
-          tableId: this.model.id,
-          rowIds: res.map((d) =>
-            this.model.primaryKeys.length === 1
-              ? d[this.model.primaryKey.column_name]
-              : this.extractPksValues(d, true),
-          ),
-          deletedAt: operationNow,
-        });
       } else {
         const execQueries: ((
           trx: Knex.Transaction,
@@ -4961,15 +4939,6 @@ class BaseModelSqlv2 implements IBaseModelSqlV2 {
 
       if (isSoftDelete) {
         await this.statsUpdate({ count: -deleted.length });
-
-        // Set trash_cleanup_due_at on first soft-delete if not already scheduled
-        if (!this.model.trash_cleanup_due_at) {
-          await Model.updateTrashCleanupDueAt(
-            this.context,
-            this.model.id,
-            new Date().toISOString(),
-          );
-        }
       }
 
       return res;
