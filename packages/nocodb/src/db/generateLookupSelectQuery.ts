@@ -1,6 +1,7 @@
 import {
   isBtLikeV2Junction,
   isMMOrMMLike,
+  isSupportedDisplayValueColumn,
   RelationTypes,
   UITypes,
 } from 'nocodb-sdk';
@@ -39,6 +40,17 @@ export async function getDisplayValueOfRefTable(
   const model = await colOpt.getRelatedTable(context);
   const modelContext = { ...context, base_id: model.base_id };
   const cols = await model.getColumns(modelContext);
+
+  // Honor per-LTAR-column override. Defensive fallback to PV if the override
+  // points to a stale/unsupported column (e.g. deleted mid-session before
+  // Column.delete2 cleanup commits).
+  const overrideId = (colOpt as LinkToAnotherRecordColumn)
+    .fk_display_value_column_id;
+  if (overrideId) {
+    const override = cols.find((c) => c.id === overrideId);
+    if (override && isSupportedDisplayValueColumn(override)) return override;
+  }
+
   return cols.find((col) => col.pv) || cols[0];
 }
 
