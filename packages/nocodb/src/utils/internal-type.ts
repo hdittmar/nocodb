@@ -95,7 +95,12 @@ export type InternalPOSTResponseType = Promise<
       unlink: (string | number | Record<string, any>)[];
     }[]
   | { message: string }
-  | { columns: any[]; previewData: any[]; totalSampleRows: number; detectedDelimiter: string }
+  | {
+      columns: any[];
+      previewData: any[];
+      totalSampleRows: number;
+      detectedDelimiter: string;
+    }
   | { id: string; name?: string }
 >;
 
