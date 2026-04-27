@@ -197,6 +197,12 @@ export function useCanvasRender({
   const isLocked = inject(IsLockedInj, ref(false))
   const isPublic = inject(IsPublicInj, ref(false))
 
+  const expandedFormPanelStore = useExpandedFormPanel()
+  const expandedPanelRowIndex = computed(() => {
+    if (!expandedFormPanelStore?.isOpen.value) return -1
+    return expandedFormPanelStore.activeRowIndex.value ?? -1
+  })
+
   const { isDark, getColor } = useTheme()
 
   const { isRowColouringEnabled } = useViewRowColorRender()
@@ -1011,6 +1017,11 @@ export function useCanvasRender({
     }
 
     ctx.fillRect(xOffset, yOffset, width, rowHeight.value)
+
+    if (expandedPanelRowIndex.value === row.rowMeta.rowIndex) {
+      ctx.fillStyle = getColor(themeV4Colors.brand['500'])
+      ctx.fillRect(xOffset, yOffset, 3, rowHeight.value)
+    }
 
     let currentX = xOffset + 4
 
