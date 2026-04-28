@@ -37,8 +37,11 @@ COPY packages/nc-secret-mgr/package.json packages/nc-secret-mgr/
 # Install the OSS workspace deps. --shamefully-hoist flattens node_modules
 # so rspack.dev.config.js can resolve `webpack-node-externals` and other
 # transitive devDeps that locally get hoisted by pnpm. --ignore-scripts
-# skips nc-gui's postinstall (we don't need the GUI to run nocodb).
-RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist
+# skips nc-gui's postinstall (we don't need the GUI to run nocodb), but
+# we still need to compile sqlite3's native binding — `pnpm rebuild`
+# triggers it on the explicit allowlist.
+RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist \
+  && pnpm rebuild sqlite3
 
 # Bring in the source.
 COPY packages/nocodb-sdk packages/nocodb-sdk
