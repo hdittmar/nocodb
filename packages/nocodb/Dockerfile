@@ -51,8 +51,12 @@ COPY scripts scripts
 
 # Build the SDK + integrations core (both required at nocodb runtime).
 RUN cd packages/nocodb-sdk && pnpm build
+# noco-integrations has its OWN pnpm workspace (isolated from the outer
+# one) that core/ depends on. Don't pass --ignore-scripts here — it breaks
+# `file:` deps resolution for nocodb-sdk and ends up not installing
+# transitive deps (e.g. axios) that core's source actually imports.
 RUN cd packages/noco-integrations \
-  && pnpm install --frozen-lockfile --ignore-scripts \
+  && pnpm install --frozen-lockfile \
   && cd core && pnpm build
 
 # Bundle nocodb itself. The dev rspack config wires `RunScriptWebpackPlugin`
