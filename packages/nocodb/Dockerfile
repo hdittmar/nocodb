@@ -45,6 +45,10 @@ COPY packages/nocodb-sdk packages/nocodb-sdk
 COPY packages/nocodb-sdk-v2 packages/nocodb-sdk-v2
 COPY packages/nocodb packages/nocodb
 COPY packages/noco-integrations packages/noco-integrations
+# nocodb source imports `nc-gui/utils/debug` (NcDebug). Pull in the
+# utils/ subtree so rspack can resolve it at build time. The rest of
+# nc-gui (the Nuxt frontend) is not needed at API-server runtime.
+COPY packages/nc-gui/utils packages/nc-gui/utils
 # SDK build's `generate:sdk` step reads templates from the workspace's
 # scripts/ dir (referenced as `../../scripts/sdk/templates` from
 # packages/nocodb-sdk). Without these the generator falls back to its
