@@ -52,11 +52,13 @@ COPY scripts scripts
 # Build the SDK + integrations core (both required at nocodb runtime).
 RUN cd packages/nocodb-sdk && pnpm build
 # noco-integrations has its OWN pnpm workspace (isolated from the outer
-# one) that core/ depends on. Don't pass --ignore-scripts here — it breaks
-# `file:` deps resolution for nocodb-sdk and ends up not installing
-# transitive deps (e.g. axios) that core's source actually imports.
+# one) that core/ depends on. core/src/utils/axios.ts imports `axios`
+# but core/package.json doesn't declare it — locally tsc resolves it
+# via the symlinked nocodb-sdk's transitive deps. In Docker that
+# resolution fails, so we --shamefully-hoist to flatten node_modules
+# and make axios visible at the workspace root.
 RUN cd packages/noco-integrations \
-  && pnpm install --frozen-lockfile \
+  && pnpm install --frozen-lockfile --shamefully-hoist \
   && cd core && pnpm build
 
 # Bundle nocodb itself. The dev rspack config wires `RunScriptWebpackPlugin`
