@@ -1052,6 +1052,7 @@ type CustomKnex = Knex & {
   _cteGenerator?: CTEGenerator;
   cteGenerator?: (context?: NcContext) => CTEGenerator;
   applyCte?: (qb: Knex.QueryInterface) => void;
+  clearCte?: () => void;
 };
 
 type CustomTransaction = Knex.Transaction & {
