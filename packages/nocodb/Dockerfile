@@ -34,9 +34,11 @@ COPY packages/nocodb-sdk-v2/package.json packages/nocodb-sdk-v2/
 COPY packages/nc-gui/package.json packages/nc-gui/
 COPY packages/nc-secret-mgr/package.json packages/nc-secret-mgr/
 
-# Install the OSS workspace deps (skip the nc-gui postinstall scripts that
-# don't matter for the API server; we only need the nocodb package + sdk).
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# Install the OSS workspace deps. --shamefully-hoist flattens node_modules
+# so rspack.dev.config.js can resolve `webpack-node-externals` and other
+# transitive devDeps that locally get hoisted by pnpm. --ignore-scripts
+# skips nc-gui's postinstall (we don't need the GUI to run nocodb).
+RUN pnpm install --frozen-lockfile --ignore-scripts --shamefully-hoist
 
 # Bring in the source.
 COPY packages/nocodb-sdk packages/nocodb-sdk
