@@ -3,7 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { extractRolesObj, NcApiVersion, ProjectRoles } from 'nocodb-sdk';
+import {
+  extractRolesObj,
+  isLinksOrLTAR,
+  NcApiVersion,
+  ProjectRoles,
+} from 'nocodb-sdk';
 import type { NcContext, NcRequest, UserType } from 'nocodb-sdk';
 import type { Request, Response } from 'express';
 import type {
@@ -20,6 +25,7 @@ import { hasMinimumRole } from '~/utils/roleHelper';
 import NcPluginMgrv2 from '~/helpers/NcPluginMgrv2';
 import { serialize } from '~/helpers/serialize';
 import { AuditsService } from '~/services/audits.service';
+import { Model } from '~/models';
 import { isEE } from '~/utils';
 import { aggregationDescription, whereDescription } from '~/mcp/descriptions';
 
@@ -671,14 +677,12 @@ export class McpService {
         async ({ tableId, records }) => {
           try {
             const recordsArray = Array.isArray(records) ? records : [records];
-
-            const result = await this.datasV3Service.dataUpdate(context, {
-              modelId: tableId,
-              baseId: context.base_id,
-              body: recordsArray as DataUpdateRequest[],
-              cookie: req,
+            const result = await this.handleUpdateRecords({
+              context,
+              req,
+              tableId,
+              records: recordsArray,
             });
-
             return {
               content: [
                 { type: 'text', text: JSON.stringify(result, null, 2) },
@@ -737,6 +741,215 @@ export class McpService {
         },
       );
     }
+  }
+
+  /**
+   * MCP `updateRecords` handler.
+   *
+   * The v3 dataUpdate path is broken for any payload that touches an LTAR
+   * field — `updateLTARCols` invokes `mmList` on a transactional baseModel
+   * whose underlying knex lacks `applyCte`, throwing
+   * `TypeError: this.knex.applyCte is not a function`. To work around it we
+   * split the payload: scalar fields go through the existing v3 update,
+   * link fields go through the v2 link/unlink endpoints (replace semantics).
+   */
+  protected async handleUpdateRecords({
+    context,
+    req,
+    tableId,
+    records,
+  }: {
+    context: NcContext;
+    req: NcRequest;
+    tableId: string;
+    records: { id: any; fields: Record<string, any> }[];
+  }) {
+    const model = await Model.get(context, tableId);
+    if (!model) {
+      throw new Error(`Table "${tableId}" not found`);
+    }
+    const columns = await model.getColumns(context);
+    const ltarColumns = columns.filter((c) => isLinksOrLTAR(c));
+    const ltarByKey = new Map<string, any>();
+    for (const c of ltarColumns) {
+      if (c.title) ltarByKey.set(c.title, c);
+      if (c.id) ltarByKey.set(c.id, c);
+    }
+
+    const scalarBatch: DataUpdateRequest[] = [];
+    const linkOps: {
+      rowId: string;
+      column: any;
+      requestedIds: string[] | null; // null = unlink all
+    }[] = [];
+
+    for (const rec of records) {
+      if (!rec || typeof rec !== 'object') continue;
+      const fields = rec.fields ?? {};
+      const scalarFields: Record<string, any> = {};
+      for (const [key, value] of Object.entries(fields)) {
+        const ltarCol = ltarByKey.get(key);
+        if (!ltarCol) {
+          scalarFields[key] = value;
+          continue;
+        }
+        linkOps.push({
+          rowId: String(rec.id),
+          column: ltarCol,
+          requestedIds: this.normalizeLinkValue(value),
+        });
+      }
+      if (Object.keys(scalarFields).length > 0) {
+        scalarBatch.push({
+          id: rec.id,
+          fields: scalarFields,
+        } as DataUpdateRequest);
+      }
+    }
+
+    if (scalarBatch.length > 0) {
+      await this.datasV3Service.dataUpdate(context, {
+        modelId: tableId,
+        baseId: context.base_id,
+        body: scalarBatch,
+        cookie: req,
+      });
+    }
+
+    for (const op of linkOps) {
+      await this.applyLinkReplace({
+        context,
+        req,
+        tableId,
+        rowId: op.rowId,
+        column: op.column,
+        requestedIds: op.requestedIds,
+      });
+    }
+
+    const updatedIds = Array.from(new Set(records.map((r) => String(r.id))));
+    const fullRecords = await Promise.all(
+      updatedIds.map((id) =>
+        this.dataTableService.dataRead(context, {
+          modelId: tableId,
+          rowId: id,
+          baseId: context.base_id,
+          apiVersion: NcApiVersion.V3,
+          query: {},
+        }),
+      ),
+    );
+    return { records: fullRecords };
+  }
+
+  /**
+   * Normalize a user-provided LTAR field value into an array of child PKs.
+   * Returns `null` to mean "unlink everything".
+   *
+   * Accepts:
+   *   null                           → unlink all
+   *   number | string                → [pk]
+   *   { id | Id | ID, ... }          → [pk]
+   *   array of any of the above      → [pk, pk, ...]
+   */
+  protected normalizeLinkValue(value: any): string[] | null {
+    if (value === null || value === undefined) return null;
+    const items = Array.isArray(value) ? value : [value];
+    const pks: string[] = [];
+    for (const item of items) {
+      if (item === null || item === undefined) continue;
+      if (typeof item === 'object') {
+        const pk = item.id ?? item.Id ?? item.ID;
+        if (pk === undefined || pk === null) continue;
+        pks.push(String(pk));
+      } else {
+        pks.push(String(item));
+      }
+    }
+    return pks;
+  }
+
+  /**
+   * Replace the contents of an LTAR field on a single row by diffing requested
+   * IDs against current links and routing through the v2 link/unlink services.
+   */
+  protected async applyLinkReplace({
+    context,
+    req,
+    tableId,
+    rowId,
+    column,
+    requestedIds,
+  }: {
+    context: NcContext;
+    req: NcRequest;
+    tableId: string;
+    rowId: string;
+    column: any;
+    requestedIds: string[] | null;
+  }) {
+    // Fetch current links so we can compute the diff for replace semantics.
+    const current = await this.dataTableService.nestedDataList(context, {
+      modelId: tableId,
+      columnId: column.id,
+      rowId,
+      query: {},
+      viewId: undefined as any,
+      apiVersion: NcApiVersion.V2,
+    });
+    const currentList = Array.isArray(current)
+      ? current
+      : current?.list ?? [];
+    const currentPks = new Set<string>(
+      currentList
+        .map((row: any) => this.extractRowPk(row))
+        .filter((v): v is string => v !== null),
+    );
+
+    const targetPks = new Set<string>(requestedIds ?? []);
+
+    const toAdd = [...targetPks].filter((pk) => !currentPks.has(pk));
+    const toRemove = [...currentPks].filter((pk) => !targetPks.has(pk));
+
+    if (toAdd.length > 0) {
+      await this.dataTableService.nestedLink(context, {
+        modelId: tableId,
+        columnId: column.id,
+        rowId,
+        refRowIds: toAdd,
+        cookie: req,
+        viewId: undefined as any,
+        query: {},
+        user: req.user,
+      });
+    }
+    if (toRemove.length > 0) {
+      await this.dataTableService.nestedUnlink(context, {
+        modelId: tableId,
+        columnId: column.id,
+        rowId,
+        refRowIds: toRemove,
+        cookie: req,
+        viewId: undefined as any,
+        query: {},
+        user: req.user,
+      });
+    }
+  }
+
+  /**
+   * Extract the PK string from a record returned by nestedDataList.
+   * Handles both v2 shapes (`{ Id: 1 }` / `{ id: 1 }`) and the v3-style
+   * `{ id, id_fields, fields }` envelope.
+   */
+  protected extractRowPk(row: any): string | null {
+    if (!row || typeof row !== 'object') return null;
+    const candidate =
+      row.id ??
+      row.Id ??
+      row.ID ??
+      (row.id_fields && (row.id_fields.Id ?? row.id_fields.id));
+    return candidate != null ? String(candidate) : null;
   }
 }
 
