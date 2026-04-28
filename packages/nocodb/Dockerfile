@@ -38,6 +38,11 @@ COPY packages/nocodb-sdk packages/nocodb-sdk
 COPY packages/nocodb-sdk-v2 packages/nocodb-sdk-v2
 COPY packages/nocodb packages/nocodb
 COPY packages/noco-integrations packages/noco-integrations
+# SDK build's `generate:sdk` step reads templates from the workspace's
+# scripts/ dir (referenced as `../../scripts/sdk/templates` from
+# packages/nocodb-sdk). Without these the generator falls back to its
+# default template, producing an Api.ts incompatible with the source.
+COPY scripts scripts
 
 # Build the SDK + integrations core (both required at nocodb runtime).
 RUN cd packages/nocodb-sdk && pnpm build
