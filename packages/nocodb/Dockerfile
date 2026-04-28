@@ -19,6 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Pin pnpm to the version the repo expects.
 RUN npm install -g pnpm@10.33.2
 
+# Tells pnpm we're in non-interactive mode — required for nested
+# pnpm install in noco-integrations (it tries to confirm modules dir
+# removal otherwise and aborts: ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY).
+ENV CI=true
+
 WORKDIR /app
 
 # Copy workspace manifests first so Docker layer-caches the install step.
