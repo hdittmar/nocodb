@@ -27,7 +27,6 @@ COPY packages/nocodb/package.json packages/nocodb/
 COPY packages/nocodb-sdk/package.json packages/nocodb-sdk/
 COPY packages/nocodb-sdk-v2/package.json packages/nocodb-sdk-v2/
 COPY packages/nc-gui/package.json packages/nc-gui/
-COPY packages/nc-mail-templates/package.json packages/nc-mail-templates/
 COPY packages/nc-secret-mgr/package.json packages/nc-secret-mgr/
 
 # Install the OSS workspace deps (skip the nc-gui postinstall scripts that
@@ -38,7 +37,6 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY packages/nocodb-sdk packages/nocodb-sdk
 COPY packages/nocodb-sdk-v2 packages/nocodb-sdk-v2
 COPY packages/nocodb packages/nocodb
-COPY packages/nc-mail-templates packages/nc-mail-templates
 COPY packages/noco-integrations packages/noco-integrations
 
 # Build the SDK + integrations core (both required at nocodb runtime).
